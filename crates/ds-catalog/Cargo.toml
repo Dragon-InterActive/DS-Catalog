@@ -1,0 +1,17 @@
+[package]
+name = "ds-catalog"
+description = "Signed program catalog of Dragon Software: schema, validation, Ed25519 signatures"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+sha2.workspace = true
+ed25519-dalek.workspace = true
+semver.workspace = true

@@ -1,0 +1,24 @@
+[workspace]
+resolver = "3"
+members = ["crates/ds-catalog", "crates/ds-sign"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+authors = ["Dragon Software <info@dragon-software.net>"]
+repository = "https://github.com/Dragon-InterActive/DS-Catalog"
+rust-version = "1.99"
+
+[workspace.dependencies]
+ds-catalog = { path = "crates/ds-catalog" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+thiserror = "2.0.21"
+sha2 = "0.11.1"
+ed25519-dalek = { version = "3.0.0", default-features = false, features = ["fast"] }
+semver = { version = "1.0.28", features = ["serde"] }
+clap = { version = "4.6.7", features = ["derive"] }
+getrandom = "0.4.3"
+ureq = "3.5.2"
+toml = "1.2.1"

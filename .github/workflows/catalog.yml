@@ -1,0 +1,73 @@
+# Katalog bauen, signieren und über GitHub Pages veröffentlichen
+# (https://catalog.dragon-software.net/catalog.json).
+# Build, sign and publish the catalog via GitHub Pages.
+#
+# Auslöser / triggers:
+#   - repository_dispatch "release": der Release-Workflow eines Programms
+#     (CT-E, Freya TDE, DS-Launcher) meldet eine neue Version
+#   - Änderungen an programs.toml oder am Werkzeug auf main
+#   - von Hand (Actions → Katalog → Run workflow)
+#
+# Secret DS_SIGN_KEY: geheimer Katalogschlüssel (Hex, aus `ds-sign keygen`).
+# Der Schritt „Prüfen“ vergleicht mit dem öffentlichen Schlüssel, der im
+# DS-Launcher eingebaut ist; ein falsches Secret fällt so sofort auf.
+
+name: Katalog
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [release]
+  push:
+    branches: [main]
+    paths: [programs.toml, site-template/**, crates/**, Cargo.lock, .github/workflows/catalog.yml]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CATALOG_PUBLIC_KEY: 176ec34d3e7b5ea3d52f83f0b3709ee3f8193211b0886a78ed9d7ff781bd85d8
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Tests
+        run: cargo test --locked
+      - name: Katalog bauen
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p site
+          cp site-template/* site/
+          cargo run --locked -q -p ds-sign -- catalog programs.toml --out site/catalog.json
+      - name: Signieren
+        env:
+          DS_SIGN_KEY: ${{ secrets.DS_SIGN_KEY }}
+        run: cargo run --locked -q -p ds-sign -- sign site/catalog.json
+      - name: Prüfen
+        run: cargo run --locked -q -p ds-sign -- verify --public "$CATALOG_PUBLIC_KEY" site/catalog.json
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
