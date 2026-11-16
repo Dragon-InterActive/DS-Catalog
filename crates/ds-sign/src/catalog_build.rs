@@ -18,7 +18,9 @@
 //! `.zip` (platform `<os>-<arch>`, `arm64` counts as `aarch64`) and
 //! `<id>-<version>-skills.tar.gz` for a skill pack. With a formula, macOS
 //! assets are ignored and macOS gets `brew` entries. Checksums come from
-//! the asset's `digest`, else the asset is downloaded and hashed.
+//! the asset's `digest`, else the asset is downloaded and hashed. Programs
+//! without any published release are left out of the catalog (they appear
+//! with their first release).
 //!
 //! *Katalog aus `programs.toml` und den GitHub-Releases bauen.*
 
@@ -206,6 +208,9 @@ pub fn build(source: &Source, github: &GitHub, generated: &str) -> Result<Catalo
                 platforms,
                 skill_pack,
             });
+        }
+        if releases.is_empty() {
+            continue;
         }
         programs.push(Program {
             id: p.id.clone(),

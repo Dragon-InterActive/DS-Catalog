@@ -223,10 +223,10 @@ fn catalog_from_github_releases() {
     };
     // Erst starten, dann die Antworten mit der Adresse füllen: zwei Server.
     let downloads = serve(vec![("/dl/w.zip".into(), windows.clone())]);
-    let api = serve(vec![(
-        "/repos/Freya-TDE/CT-E/releases".into(),
-        assets(&downloads),
-    )]);
+    let api = serve(vec![
+        ("/repos/Freya-TDE/CT-E/releases".into(), assets(&downloads)),
+        ("/repos/Freya-TDE/Leer/releases".into(), b"[]".to_vec()),
+    ]);
     std::fs::write(
         dir.join("programs.toml"),
         r#"
@@ -237,6 +237,12 @@ license = "MIT OR Apache-2.0"
 repository = "Freya-TDE/CT-E"
 formula = "freya-tde/tap/ct-editor"
 releases = 2
+
+[[program]]
+id = "noch-nicht"
+name = "Ohne Release"
+license = "MIT"
+repository = "Freya-TDE/Leer"
 "#,
     )
     .unwrap();
@@ -256,6 +262,11 @@ releases = 2
     let c: serde_json::Value =
         serde_json::from_slice(&std::fs::read(dir.join("catalog.json")).unwrap()).unwrap();
     assert_eq!(c["generated"], "2026-11-17");
+    assert_eq!(
+        c["programs"].as_array().unwrap().len(),
+        1,
+        "Programm ohne Release fehlt"
+    );
     let releases = c["programs"][0]["releases"].as_array().unwrap();
     assert_eq!(releases.len(), 2, "Vorabversion und Entwurf übersprungen");
     let r = &releases[0];
