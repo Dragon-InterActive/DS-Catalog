@@ -10,6 +10,8 @@ homepage = "https://github.com/Freya-TDE/Freya-TDE"
 license = "MIT OR Apache-2.0"
 repository = "Freya-TDE/Freya-TDE"
 formula = "freya-tde/tap/freya-tde"
+# Formel mit fertigem arm64-Programm / formula with a prebuilt arm64 program
+brew-platforms = ["macos-aarch64"]
 
 [[program]]
 id = "ct-editor"
@@ -29,3 +31,4 @@ license = "MIT OR Apache-2.0"
 repository = "Dragon-InterActive/DS-Catalog"
 tag-prefix = "ds-launcher-v"
 formula = "freya-tde/tap/ds-launcher"
+brew-platforms = ["macos-aarch64"]

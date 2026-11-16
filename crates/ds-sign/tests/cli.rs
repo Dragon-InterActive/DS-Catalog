@@ -239,6 +239,14 @@ formula = "freya-tde/tap/ct-editor"
 releases = 2
 
 [[program]]
+id = "nur-arm"
+name = "Nur Apple Silicon"
+license = "MIT"
+repository = "Freya-TDE/CT-E"
+formula = "freya-tde/tap/nur-arm"
+brew-platforms = ["macos-aarch64"]
+
+[[program]]
 id = "noch-nicht"
 name = "Ohne Release"
 license = "MIT"
@@ -264,9 +272,13 @@ repository = "Freya-TDE/Leer"
     assert_eq!(c["generated"], "2026-11-17");
     assert_eq!(
         c["programs"].as_array().unwrap().len(),
-        1,
+        2,
         "Programm ohne Release fehlt"
     );
+    // brew-platforms: nur Apple Silicon.
+    let arm = &c["programs"][1]["releases"][0]["platforms"];
+    assert_eq!(arm["macos-aarch64"]["formula"], "freya-tde/tap/nur-arm");
+    assert!(arm.get("macos-x86_64").is_none());
     let releases = c["programs"][0]["releases"].as_array().unwrap();
     assert_eq!(releases.len(), 2, "Vorabversion und Entwurf übersprungen");
     let r = &releases[0];

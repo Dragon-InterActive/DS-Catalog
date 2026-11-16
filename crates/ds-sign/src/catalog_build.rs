@@ -11,6 +11,7 @@
 //! repository = "Freya-TDE/CT-E"          # GitHub releases
 //! tag-prefix = "v"                       # default "v"
 //! formula = "freya-tde/tap/ct-editor"    # macOS via Homebrew (optional)
+//! brew-platforms = ["macos-aarch64"]     # Macs the formula runs on (default both)
 //! releases = 1                           # newest releases to list (default 1)
 //! ```
 //!
@@ -54,12 +55,20 @@ pub struct ProgramSource {
     #[serde(default = "default_prefix")]
     pub tag_prefix: String,
     pub formula: Option<String>,
+    /// Macs the formula serves (a formula with a prebuilt arm64 program only
+    /// `macos-aarch64`); default both.
+    #[serde(default = "default_brew_platforms")]
+    pub brew_platforms: Vec<String>,
     #[serde(default = "default_releases")]
     pub releases: usize,
 }
 
 fn default_prefix() -> String {
     "v".into()
+}
+
+fn default_brew_platforms() -> Vec<String> {
+    vec!["macos-aarch64".into(), "macos-x86_64".into()]
 }
 
 fn default_releases() -> usize {
@@ -151,6 +160,18 @@ fn classify(name: &str, id: &str, version: &Version) -> Option<AssetKind> {
 
 /// Builds the catalog; `generated` is the date written into it.
 pub fn build(source: &Source, github: &GitHub, generated: &str) -> Result<Catalog, String> {
+    for p in &source.programs {
+        if let Some(bad) = p
+            .brew_platforms
+            .iter()
+            .find(|m| !m.starts_with("macos-") || !platform::is_valid(m))
+        {
+            return Err(format!(
+                "{}: brew-platforms: „{bad}“ ist keine macOS-Plattform",
+                p.id
+            ));
+        }
+    }
     let mut programs = Vec::new();
     for p in &source.programs {
         let mut found: Vec<(Version, GhRelease)> = github
@@ -191,9 +212,9 @@ pub fn build(source: &Source, github: &GitHub, generated: &str) -> Result<Catalo
                 }
             }
             if let Some(formula) = &p.formula {
-                for mac in ["macos-aarch64", "macos-x86_64"] {
+                for mac in &p.brew_platforms {
                     platforms.insert(
-                        mac.into(),
+                        mac.clone(),
                         Artifact::Brew {
                             formula: formula.clone(),
                         },

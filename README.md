@@ -28,12 +28,12 @@ DS_SIGN_KEY=… cargo run -p ds-sign -- sign catalog.json             # catalog.
 
 Release-Dateien heißen `<id>-<version>-<plattform>.tar.gz` bzw. `.zip` (z. B. `ct-editor-0.4.0-linux-x86_64.tar.gz`),
 Skill-Pakete `<id>-<version>-skills.tar.gz`. Linux-Archive haben einen obersten Ordner mit `bin/<id>` und `share/…`.
-Programme mit Homebrew-Formel bekommen für macOS einen `brew`-Eintrag. Neue Releases melden die Programme per
+Programme mit Homebrew-Formel bekommen für macOS einen `brew`-Eintrag, standardmäßig für beide Mac-Plattformen; `brew-platforms` schränkt das ein (z. B. nur `macos-aarch64` bei Formeln mit fertigem arm64-Programm). Neue Releases melden die Programme per
 `repository_dispatch` (Typ `release`).
 
 *Release assets are named `<id>-<version>-<platform>.tar.gz` or `.zip`, skill packs `<id>-<version>-skills.tar.gz`.
 Linux archives have one top folder with `bin/<id>` and `share/…`. Programs with a Homebrew formula get a `brew`
-entry for macOS. Programs announce new releases via `repository_dispatch` (type `release`).*
+entry for macOS, for both Macs by default; `brew-platforms` narrows it (e.g. only `macos-aarch64` for formulas with a prebuilt arm64 program). Programs announce new releases via `repository_dispatch` (type `release`).*
 
 ## ds-sign installieren / Installing ds-sign
 
