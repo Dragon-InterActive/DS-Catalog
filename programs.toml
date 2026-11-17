@@ -12,6 +12,9 @@ repository = "Freya-TDE/Freya-TDE"
 formula = "freya-tde/tap/freya-tde"
 # Formel mit fertigem arm64-Programm / formula with a prebuilt arm64 program
 brew-platforms = ["macos-aarch64"]
+# Freya TDE bringt den CT-Editor mit, wenn er fehlt (nicht umgekehrt; DS-Launcher ≥ 0.2.0).
+# Freya TDE installs the CT-Editor along if missing (not the other way round).
+requires = ["ct-editor"]
 
 [[program]]
 id = "ct-editor"
