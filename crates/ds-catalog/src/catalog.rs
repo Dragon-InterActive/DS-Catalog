@@ -12,6 +12,7 @@
 //!   "programs": [{
 //!     "id": "freya-tde", "name": "Freya TDE",
 //!     "description": "…", "homepage": "https://…", "license": "MIT OR Apache-2.0",
+//!     "requires": ["ct-editor"],
 //!     "releases": [{
 //!       "version": "0.1.0",
 //!       "platforms": {
@@ -24,7 +25,12 @@
 //! }
 //! ```
 //!
-//! *Programmkatalog: statische, signierte JSON-Datei.*
+//! Readers skip fields they don't know (no `deny_unknown_fields`): a newer
+//! catalog with additional fields still loads in an older launcher, which
+//! must keep reading it to update itself.
+//!
+//! *Programmkatalog: statische, signierte JSON-Datei; unbekannte Felder werden
+//! übersprungen, damit ältere Launcher neuere Kataloge lesen.*
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -37,7 +43,6 @@ use crate::{Error, codes, sign};
 pub const FORMAT: u32 = 1;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct Catalog {
     pub format: u32,
     /// When the catalog was made (ISO date, informative).
@@ -46,7 +51,6 @@ pub struct Catalog {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct Program {
     /// Stable id (`a-z`, `0-9`, `-`), e.g. `freya-tde`.
     pub id: String,
@@ -55,11 +59,14 @@ pub struct Program {
     pub homepage: String,
     /// SPDX expression of the program's license.
     pub license: String,
+    /// Programs installed together with this one if they are missing (not
+    /// the other way round), e.g. Freya TDE brings the CT-Editor.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub requires: Vec<String>,
     pub releases: Vec<Release>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct Release {
     pub version: Version,
     /// Artifact per platform key (`<os>-<arch>`, see [`crate::platform`]).
@@ -71,7 +78,7 @@ pub struct Release {
 
 /// How a program gets onto a platform.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+#[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Artifact {
     /// An archive (`.tar.gz`, `.zip`) the launcher downloads and unpacks.
     Archive(Download),
@@ -81,7 +88,6 @@ pub enum Artifact {
 
 /// A file to download, with its checksum.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct Download {
     pub url: String,
     /// SHA-256, lower-case hex.
@@ -172,7 +178,59 @@ impl Catalog {
                 }
             }
         }
+        for p in &self.programs {
+            for r in &p.requires {
+                if r == &p.id {
+                    return bad(format!("„{}“ verlangt sich selbst", p.id));
+                }
+                if !ids.contains(r) {
+                    return bad(format!(
+                        "„{}“ verlangt „{r}“, das nicht im Katalog steht",
+                        p.id
+                    ));
+                }
+            }
+        }
+        for p in &self.programs {
+            self.requirements(&p.id)?;
+        }
         Ok(())
+    }
+
+    /// The programs `id` requires, directly or through others, in the order
+    /// they have to be installed (a requirement before what needs it).
+    pub fn requirements(&self, id: &str) -> Result<Vec<&Program>, Error> {
+        fn visit<'a>(
+            catalog: &'a Catalog,
+            id: &str,
+            path: &mut Vec<String>,
+            out: &mut Vec<&'a Program>,
+        ) -> Result<(), Error> {
+            let Some(program) = catalog.program(id) else {
+                return Ok(());
+            };
+            if path.iter().any(|p| p == id) {
+                path.push(id.to_owned());
+                return Err(Error::new(
+                    codes::CATALOG_INVALID,
+                    format!("Programme verlangen sich im Kreis: {}", path.join(" → ")),
+                ));
+            }
+            path.push(id.to_owned());
+            for r in &program.requires {
+                visit(catalog, r, path, out)?;
+                if let Some(req) = catalog.program(r)
+                    && !out.iter().any(|o| o.id == req.id)
+                {
+                    out.push(req);
+                }
+            }
+            path.pop();
+            Ok(())
+        }
+        let mut out = Vec::new();
+        visit(self, id, &mut Vec::new(), &mut out)?;
+        Ok(out)
     }
 
     pub fn program(&self, id: &str) -> Option<&Program> {
@@ -297,7 +355,6 @@ mod tests {
             code(&v)
         };
         assert_eq!(edit(&|v| v["format"] = 2.into()), codes::CATALOG_INVALID);
-        assert_eq!(edit(&|v| v["extra"] = 1.into()), codes::CATALOG_INVALID);
         assert_eq!(
             edit(&|v| v["programs"][0]["id"] = "Freya".into()),
             codes::CATALOG_INVALID
@@ -332,5 +389,73 @@ mod tests {
                 v["programs"][0]["releases"][0]["platforms"]["linux-x86_64"].clone()),
             codes::CATALOG_INVALID
         );
+    }
+
+    /// Ein älterer Launcher muss neuere Kataloge lesen (sonst aktualisiert er
+    /// sich nicht mehr): unbekannte Felder werden übersprungen.
+    #[test]
+    fn skips_unknown_fields() {
+        let mut v = catalog_json();
+        v["extra"] = 1.into();
+        v["programs"][0]["future"] = "x".into();
+        v["programs"][0]["releases"][0]["notes"] = "y".into();
+        v["programs"][0]["releases"][0]["platforms"]["linux-x86_64"]["mirror"] = "z".into();
+        let (json, sig) = signed(&v);
+        assert!(Catalog::load_with_key(&json, &sig, &sign::public_key(&SECRET)).is_ok());
+    }
+
+    fn with_programs(programs: &[(&str, &[&str])]) -> serde_json::Value {
+        let mut v = catalog_json();
+        let template = v["programs"][0].clone();
+        v["programs"] = programs
+            .iter()
+            .map(|(id, requires)| {
+                let mut p = template.clone();
+                p["id"] = (*id).into();
+                p["requires"] = requires
+                    .iter()
+                    .map(|r| serde_json::Value::from(*r))
+                    .collect();
+                p
+            })
+            .collect();
+        v
+    }
+
+    #[test]
+    fn requirements_in_install_order() {
+        let key = sign::public_key(&SECRET);
+        let load = |v: &serde_json::Value| {
+            let (json, sig) = signed(v);
+            Catalog::load_with_key(&json, &sig, &key)
+        };
+        let c = load(&with_programs(&[
+            ("freya-tde", &["ct-editor", "helper"]),
+            ("ct-editor", &["helper"]),
+            ("helper", &[]),
+        ]))
+        .unwrap();
+        let ids = |id| -> Vec<String> {
+            c.requirements(id)
+                .unwrap()
+                .iter()
+                .map(|p| p.id.clone())
+                .collect()
+        };
+        assert_eq!(ids("freya-tde"), ["helper", "ct-editor"]);
+        assert_eq!(ids("ct-editor"), ["helper"]);
+        assert!(ids("helper").is_empty());
+        // Ohne Angabe: nichts verlangt, und das Feld wird nicht geschrieben.
+        assert!(c.program("helper").unwrap().requires.is_empty());
+        let json = serde_json::to_string(c.program("helper").unwrap()).unwrap();
+        assert!(!json.contains("requires"));
+
+        for bad in [
+            with_programs(&[("freya-tde", &["fehlt"])]),
+            with_programs(&[("freya-tde", &["freya-tde"])]),
+            with_programs(&[("a", &["b"]), ("b", &["c"]), ("c", &["a"])]),
+        ] {
+            assert_eq!(load(&bad).unwrap_err().code, codes::CATALOG_INVALID);
+        }
     }
 }

@@ -13,6 +13,7 @@
 //! formula = "freya-tde/tap/ct-editor"    # macOS via Homebrew (optional)
 //! brew-platforms = ["macos-aarch64"]     # Macs the formula runs on (default both)
 //! releases = 1                           # newest releases to list (default 1)
+//! requires = ["other-id"]                # installed along if missing (optional)
 //! ```
 //!
 //! Release assets are found by name: `<id>-<version>-<platform>.tar.gz` or
@@ -61,6 +62,9 @@ pub struct ProgramSource {
     pub brew_platforms: Vec<String>,
     #[serde(default = "default_releases")]
     pub releases: usize,
+    /// Programs installed together with this one if they are missing.
+    #[serde(default)]
+    pub requires: Vec<String>,
 }
 
 fn default_prefix() -> String {
@@ -239,6 +243,7 @@ pub fn build(source: &Source, github: &GitHub, generated: &str) -> Result<Catalo
             description: p.description.clone(),
             homepage: p.homepage.clone(),
             license: p.license.clone(),
+            requires: p.requires.clone(),
             releases,
         });
     }

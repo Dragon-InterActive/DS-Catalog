@@ -31,9 +31,16 @@ Skill-Pakete `<id>-<version>-skills.tar.gz`. Linux-Archive haben einen obersten 
 Programme mit Homebrew-Formel bekommen für macOS einen `brew`-Eintrag, standardmäßig für beide Mac-Plattformen; `brew-platforms` schränkt das ein (z. B. nur `macos-aarch64` bei Formeln mit fertigem arm64-Programm). Neue Releases melden die Programme per
 `repository_dispatch` (Typ `release`).
 
+`requires = ["ct-editor"]` bei einem Programm: der DS-Launcher (ab 0.2.0) installiert die genannten Programme mit,
+wenn sie fehlen – nicht umgekehrt, und Deinstallieren entfernt sie nicht. Leser überspringen unbekannte Felder, damit
+ältere Launcher neuere Kataloge lesen (und sich damit aktualisieren); neue Felder erst eintragen, wenn die Launcher sie
+kennen sollen.
+
 *Release assets are named `<id>-<version>-<platform>.tar.gz` or `.zip`, skill packs `<id>-<version>-skills.tar.gz`.
 Linux archives have one top folder with `bin/<id>` and `share/…`. Programs with a Homebrew formula get a `brew`
-entry for macOS, for both Macs by default; `brew-platforms` narrows it (e.g. only `macos-aarch64` for formulas with a prebuilt arm64 program). Programs announce new releases via `repository_dispatch` (type `release`).*
+entry for macOS, for both Macs by default; `brew-platforms` narrows it (e.g. only `macos-aarch64` for formulas with a prebuilt arm64 program). Programs announce new releases via `repository_dispatch` (type `release`).
+`requires` lists programs the DS-Launcher (0.2.0 and later) installs along if missing – never the other way round.
+Readers skip unknown fields so that older launchers keep reading newer catalogs.*
 
 ## ds-sign installieren / Installing ds-sign
 
