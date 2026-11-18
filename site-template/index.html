@@ -3,17 +3,128 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dragon Software – Programmkatalog</title>
+<meta name="color-scheme" content="light dark">
+<title>DS-Launcher – Dragon Software</title>
+<link rel="icon" href="ds-launcher.png" type="image/png">
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; line-height: 1.5; }
-  code { background: #8882; padding: .1rem .3rem; border-radius: .2rem; }
+  :root { --bg: #f5f5f5; --card: #fff; --fg: #111; --muted: #555; --line: #d9d9d9; --accent: #990000; --code: #ececec; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1f1f1f; --card: #2a2a2a; --fg: #f2f2f2; --muted: #bbb; --line: #444; --accent: #ff6b6b; --code: #161616; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.55; }
+  main { max-width: 52rem; margin: 0 auto; padding: 2.5rem 1rem 3rem; }
+  header { display: flex; gap: 1.2rem; align-items: center; margin-bottom: 1.5rem; }
+  header img { width: 88px; height: 88px; }
+  h1 { margin: 0; font-size: 2rem; }
+  h2 { margin-top: 2.2rem; font-size: 1.3rem; }
+  .muted { color: var(--muted); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { margin: 0 0 .4rem; font-size: 1.05rem; }
+  .button { display: inline-block; margin: .3rem 0; padding: .45rem 1rem; border-radius: 999px; background: #990000; color: #fff; text-decoration: none; font-weight: 600; }
+  .button:hover { filter: brightness(1.1); }
+  code { background: var(--code); padding: .1rem .35rem; border-radius: 4px; font-size: .9em; overflow-wrap: anywhere; }
+  .sha { font-size: .75rem; color: var(--muted); overflow-wrap: anywhere; }
+  ol { padding-left: 1.2rem; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--line); }
+  footer { margin-top: 3rem; font-size: .85rem; color: var(--muted); }
+  a { color: var(--accent); }
 </style>
 </head>
 <body>
-<h1>Programmkatalog von Dragon Software</h1>
-<p>Diese Adresse liefert den signierten Katalog für den DS-Launcher:
-<a href="catalog.json"><code>catalog.json</code></a> und
-<a href="catalog.json.sig"><code>catalog.json.sig</code></a> (Ed25519).</p>
-<p lang="en">This address serves the signed catalog for the DS-Launcher.</p>
+<main>
+  <header>
+    <img src="ds-launcher.png" alt="">
+    <div>
+      <h1>DS-Launcher</h1>
+      <p class="muted" style="margin:.2rem 0 0">Installiert und aktualisiert die Programme von Dragon Software – Freya TDE, CT-Editor und mehr.<br>
+      <span lang="en">Installs and updates the programs of Dragon Software.</span></p>
+    </div>
+  </header>
+
+  <h2>Herunterladen <span class="muted" lang="en">/ Download</span> <span id="version" class="muted"></span></h2>
+  <div class="grid" id="downloads">
+    <div class="card"><p class="muted">Lade den Katalog …</p></div>
+  </div>
+  <noscript>
+    <p>Ohne JavaScript: alle Downloads unter
+    <a href="https://github.com/Dragon-InterActive/DS-Catalog/releases/latest">GitHub-Releases</a>.</p>
+  </noscript>
+
+  <h2>Erster Start <span class="muted" lang="en">/ First start</span></h2>
+  <ol>
+    <li><strong>Windows, Linux:</strong> das Archiv entpacken und <code>bin/ds-launcher</code> (Windows
+      <code>bin\ds-launcher.exe</code>) starten. Unter „Programme“ den DS-Launcher selbst installieren – danach steht er
+      im Startmenü und hält sich und die anderen Programme aktuell.</li>
+    <li><strong>macOS (Apple Silicon):</strong> mit Homebrew installieren (Befehl oben), dann <code>ds-launcher</code>
+      starten; er legt sich und die installierten Programme unter „Programme“ an.</li>
+    <li>Unter „Voraussetzungen“ prüft der Launcher Rust, rust-analyzer, clippy, rustfmt, den Debugger und (Linux) GTK 4
+      und hilft beim Nachinstallieren.</li>
+  </ol>
+
+  <h2>Programme im Katalog <span class="muted" lang="en">/ Programs</span></h2>
+  <table id="programs"><tr><td class="muted">…</td></tr></table>
+
+  <footer>
+    Der Launcher prüft den Katalog mit einer Ed25519-Signatur
+    (<a href="catalog.json">catalog.json</a>, <a href="catalog.json.sig">catalog.json.sig</a>) und jedes Archiv per SHA-256.
+    Alle Releases: <a href="https://github.com/Dragon-InterActive/DS-Catalog/releases">GitHub</a>.
+    © Dragon Software · MIT OR Apache-2.0
+  </footer>
+</main>
+<script>
+// Die Seite liest den Katalog selbst: neue Versionen erscheinen ohne Änderung hier.
+(function () {
+  const labels = { "windows-x86_64": "Windows (x86-64)", "linux-x86_64": "Linux (x86-64)", "macos-aarch64": "macOS (Apple Silicon)", "macos-x86_64": "macOS (Intel)" };
+  const order = ["windows-x86_64", "linux-x86_64", "macos-aarch64", "macos-x86_64"];
+  const cmp = (a, b) => {
+    const pa = a.split(/[.-]/).map(Number), pb = b.split(/[.-]/).map(Number);
+    for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
+    return 0;
+  };
+  const newest = (p) => p.releases.slice().sort((a, b) => cmp(b.version, a.version))[0];
+  const mb = (n) => (n / 1048576).toFixed(1) + " MB";
+  const el = (tag, props, ...kids) => { const e = document.createElement(tag); Object.assign(e, props || {}); e.append(...kids); return e; };
+  fetch("catalog.json").then((r) => r.json()).then((catalog) => {
+    const launcher = catalog.programs.find((p) => p.id === "ds-launcher");
+    const box = document.getElementById("downloads");
+    box.replaceChildren();
+    if (launcher) {
+      const release = newest(launcher);
+      document.getElementById("version").textContent = "– Version " + release.version;
+      for (const platform of order) {
+        const art = release.platforms[platform];
+        if (!art) continue;
+        const card = el("div", { className: "card" }, el("h3", {}, labels[platform] || platform));
+        if (art.kind === "archive") {
+          const file = art.url.split("/").pop();
+          card.append(el("a", { className: "button", href: art.url }, "Herunterladen"),
+                      el("div", { className: "muted" }, file + " · " + mb(art.size)),
+                      el("div", { className: "sha" }, "SHA-256: " + art.sha256));
+        } else if (art.kind === "brew") {
+          card.append(el("p", {}, "Mit Homebrew:"), el("code", {}, "brew install " + art.formula));
+        }
+        box.append(card);
+      }
+    }
+    const table = document.getElementById("programs");
+    table.replaceChildren(el("tr", {}, el("th", {}, "Programm"), el("th", {}, "Version"), el("th", {}, "Systeme")));
+    for (const p of catalog.programs) {
+      const r = newest(p);
+      const name = p.homepage ? el("a", { href: p.homepage }, p.name) : p.name;
+      table.append(el("tr", {},
+        el("td", {}, name, el("div", { className: "muted" }, p.description)),
+        el("td", {}, r.version),
+        el("td", {}, Object.keys(r.platforms).map((k) => (labels[k] || k).replace(/ \(.*\)/, "")).filter((v, i, a) => a.indexOf(v) === i).join(", "))));
+    }
+  }).catch(() => {
+    document.getElementById("downloads").replaceChildren(el("div", { className: "card" },
+      el("p", {}, "Katalog nicht erreichbar – alle Downloads unter "),
+      el("a", { href: "https://github.com/Dragon-InterActive/DS-Catalog/releases/latest" }, "GitHub-Releases")));
+  });
+})();
+</script>
 </body>
 </html>
