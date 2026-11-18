@@ -55,7 +55,11 @@ pub struct Program {
     /// Stable id (`a-z`, `0-9`, `-`), e.g. `freya-tde`.
     pub id: String,
     pub name: String,
+    /// German description.
     pub description: String,
+    /// English description (optional; readers fall back to `description`).
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description_en: String,
     pub homepage: String,
     /// SPDX expression of the program's license.
     pub license: String,

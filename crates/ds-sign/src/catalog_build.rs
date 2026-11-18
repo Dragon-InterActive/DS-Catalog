@@ -6,6 +6,7 @@
 //! id = "ct-editor"
 //! name = "CT-Editor"
 //! description = "Visueller Editor für Cargo.toml-Dateien"
+//! description-en = "Visual editor for Cargo.toml files"   # optional
 //! homepage = "https://github.com/Freya-TDE/CT-E"
 //! license = "MIT OR Apache-2.0"
 //! repository = "Freya-TDE/CT-E"          # GitHub releases
@@ -48,6 +49,8 @@ pub struct ProgramSource {
     pub name: String,
     #[serde(default)]
     pub description: String,
+    #[serde(default)]
+    pub description_en: String,
     #[serde(default)]
     pub homepage: String,
     pub license: String,
@@ -241,6 +244,7 @@ pub fn build(source: &Source, github: &GitHub, generated: &str) -> Result<Catalo
             id: p.id.clone(),
             name: p.name.clone(),
             description: p.description.clone(),
+            description_en: p.description_en.clone(),
             homepage: p.homepage.clone(),
             license: p.license.clone(),
             requires: p.requires.clone(),
