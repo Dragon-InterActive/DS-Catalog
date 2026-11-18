@@ -13,6 +13,10 @@
 # folder and lets the launcher install itself (Program Files\Dragon Software,
 # start menu; UAC asks for rights).
 
+# GitHub Pages liefert .ps1 ohne Zeichensatz aus: Windows PowerShell 5.1 liest
+# die Datei dann nicht als UTF-8. Meldungen deshalb nur in ASCII.
+# GitHub Pages serves .ps1 without a charset: messages are ASCII only.
+
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
@@ -36,7 +40,7 @@ try {
     $expected = ((Get-Content -Raw "$zip.sha256").Trim() -split '\s+')[0].ToLower()
     $actual = (Get-FileHash -Algorithm SHA256 -Path $zip).Hash.ToLower()
     if ($expected -ne $actual) {
-        throw "ds-launcher: Prüfsumme stimmt nicht / checksum mismatch ($actual, erwartet / expected $expected)"
+        throw "ds-launcher: SHA-256 stimmt nicht / checksum mismatch ($actual, erwartet / expected $expected)"
     }
 
     $dir = Join-Path $work 'launcher'
@@ -45,7 +49,7 @@ try {
     if (-not $exe) { throw 'ds-launcher: ds-launcher.exe fehlt im Archiv / missing in the archive' }
 
     Write-Host 'Installiere / installing ...'
-    # Fensterprogramm: ohne -Wait würde PowerShell nicht auf das Ende warten.
+    # Fensterprogramm: ohne -Wait wuerde PowerShell nicht auf das Ende warten.
     $run = Start-Process -FilePath $exe.FullName -ArgumentList 'install', 'ds-launcher' `
         -NoNewWindow -Wait -PassThru
     if ($run.ExitCode -ne 0) {
@@ -54,7 +58,7 @@ try {
 
     $installed = Join-Path $env:ProgramFiles 'Dragon Software\DS-Launcher\bin\ds-launcher.exe'
     if (Test-Path $installed) { Start-Process -FilePath $installed }
-    Write-Host 'Fertig / done: der DS-Launcher steht im Startmenü / the DS-Launcher is in the start menu.'
+    Write-Host 'Fertig / done: DS-Launcher ist installiert / is installed.'
 }
 finally {
     Remove-Item -Recurse -Force -Path $work -ErrorAction SilentlyContinue
