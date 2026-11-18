@@ -41,6 +41,10 @@
   .card h3 { margin: 0 0 .4rem; font-size: 1.05rem; }
   .button { display: inline-block; margin: .3rem 0; padding: .45rem 1rem; border-radius: 999px; background: #990000; color: #fff; text-decoration: none; font-weight: 600; }
   .button:hover { filter: brightness(1.1); }
+  .copy { font: inherit; font-size: .85rem; margin-right: .6rem; padding: .2rem .8rem; border-radius: 999px; border: 1px solid var(--line); background: none; color: var(--fg); cursor: pointer; }
+  .copy:hover { border-color: var(--accent); }
+  .copy[data-done] { border-color: var(--accent); color: var(--accent); }
+  .card code { display: block; padding: .4rem .5rem; }
   code { background: var(--code); padding: .1rem .35rem; border-radius: 4px; font-size: .9em; overflow-wrap: anywhere; }
   .sha { font-size: .75rem; color: var(--muted); overflow-wrap: anywhere; }
   ol { padding-left: 1.2rem; }
@@ -66,7 +70,37 @@
     </button>
   </header>
 
-  <h2><span data-l="de">Herunterladen</span><span data-l="en">Download</span> <span id="version" class="muted"></span></h2>
+  <h2><span data-l="de">Installieren</span><span data-l="en">Install</span> <span id="version" class="muted"></span></h2>
+  <p>
+    <span data-l="de">Am einfachsten mit einem Befehl – er lädt den Launcher, prüft die Prüfsumme und lässt ihn sich selbst
+      installieren (Startmenü, Rechteabfrage):</span>
+    <span data-l="en">Easiest with one command – it downloads the launcher, checks its checksum and lets it install
+      itself (start menu, asks for rights):</span>
+  </p>
+  <div class="grid">
+    <div class="card">
+      <h3>Linux, macOS</h3>
+      <p><span data-l="de">Im Terminal:</span><span data-l="en">In a terminal:</span></p>
+      <code id="cmd-sh">curl -fsSL https://catalog.dragon-software.net/install.sh | sh</code>
+      <p><button class="copy" type="button" data-copy="cmd-sh"><span data-l="de">Kopieren</span><span data-l="en">Copy</span></button>
+        <a href="install.sh"><span data-l="de">Skript ansehen</span><span data-l="en">View the script</span></a></p>
+    </div>
+    <div class="card">
+      <h3>Windows</h3>
+      <p><span data-l="de">In PowerShell:</span><span data-l="en">In PowerShell:</span></p>
+      <code id="cmd-ps">irm https://catalog.dragon-software.net/install.ps1 | iex</code>
+      <p><button class="copy" type="button" data-copy="cmd-ps"><span data-l="de">Kopieren</span><span data-l="en">Copy</span></button>
+        <a href="install.ps1"><span data-l="de">Skript ansehen</span><span data-l="en">View the script</span></a></p>
+    </div>
+  </div>
+  <p class="muted">
+    <span data-l="de">Unter macOS installiert das Skript über Homebrew. Unter Windows fragt SmartScreen so nicht nach – ein
+      über den Browser geladenes Archiv muss man erst „zulassen“.</span>
+    <span data-l="en">On macOS the script installs with Homebrew. On Windows SmartScreen does not ask this way – an archive
+      downloaded with the browser has to be „unblocked“ first.</span>
+  </p>
+
+  <h2><span data-l="de">Oder herunterladen</span><span data-l="en">Or download</span></h2>
   <div class="grid" id="downloads">
     <div class="card"><p class="muted"><span data-l="de">Lade den Katalog …</span><span data-l="en">Loading the catalog …</span></p></div>
   </div>
@@ -76,7 +110,7 @@
 
   <h2><span data-l="de">Erster Start</span><span data-l="en">First start</span></h2>
   <ol data-l="de">
-    <li><strong>Windows, Linux:</strong> das Archiv entpacken und <code>bin/ds-launcher</code> (Windows
+    <li><strong>Windows, Linux (heruntergeladen):</strong> das Archiv entpacken und <code>bin/ds-launcher</code> (Windows
       <code>bin\ds-launcher.exe</code>) starten. Unter „Programme“ den DS-Launcher selbst installieren – danach steht er
       im Startmenü und hält sich und die anderen Programme aktuell.</li>
     <li><strong>macOS (Apple Silicon):</strong> mit Homebrew installieren (Befehl oben), dann <code>ds-launcher</code>
@@ -85,7 +119,7 @@
       und hilft beim Nachinstallieren.</li>
   </ol>
   <ol data-l="en">
-    <li><strong>Windows, Linux:</strong> unpack the archive and start <code>bin/ds-launcher</code> (Windows
+    <li><strong>Windows, Linux (downloaded):</strong> unpack the archive and start <code>bin/ds-launcher</code> (Windows
       <code>bin\ds-launcher.exe</code>). Under „Programme“ (programs) install the DS-Launcher itself – then it is in
       the start menu and keeps itself and the other programs up to date.</li>
     <li><strong>macOS (Apple Silicon):</strong> install it with Homebrew (command above), then start
@@ -173,6 +207,16 @@
     }
   }
 
+  // Befehle kopieren.
+  for (const button of document.querySelectorAll("button.copy")) {
+    button.addEventListener("click", () => {
+      const command = document.getElementById(button.dataset.copy).textContent;
+      navigator.clipboard?.writeText(command).then(() => {
+        button.dataset.done = "1";
+        setTimeout(() => delete button.dataset.done, 1500);
+      });
+    });
+  }
   document.getElementById("switch").addEventListener("click", () => {
     const lang = root.dataset.lang === "de" ? "en" : "de";
     root.dataset.lang = lang;
